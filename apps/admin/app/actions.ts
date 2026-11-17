@@ -64,15 +64,31 @@ export async function signInAction(formData: FormData) {
     // ignore — sign-in will create a fresh session anyway
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    const message = error.message || "Sign in failed. Please try again.";
-    const code = error.code ?? "unknown";
-    const friendly =
-      code === "validation_failed"
+  let signInError: { message?: string; code?: string } | null = null;
+  try {
+    const result = await supabase.auth.signInWithPassword({ email, password });
+    signInError = result.error;
+  } catch {
+    // Network / fetch failure (Supabase unreachable or URL not configured).
+    signInError = {
+      message:
+        "Cannot reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and your internet connection.",
+      code: "network_error",
+    };
+  }
+
+  if (signInError) {
+    const rawMessage = signInError.message || "Sign in failed. Please try again.";
+    const code = signInError.code ?? "";
+    const isNetworkError = !code || /fetch failed|failed to fetch|network/i.test(rawMessage);
+    const friendly = isNetworkError
+      ? "Cannot reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and your internet connection."
+      : code === "validation_failed"
         ? "Auth session validation failed. Please try again in a minute — if it repeats, sign out and retry."
-        : message;
-    redirect(`/login?error=${encodeURIComponent(friendly)}&code=${encodeURIComponent(code)}`);
+        : rawMessage;
+    redirect(
+      `/login?error=${encodeURIComponent(friendly)}&code=${encodeURIComponent(isNetworkError ? "network_error" : code || "unknown")}`,
+    );
   }
 
   redirect("/dashboard");

@@ -13,6 +13,8 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
 
+  const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+
   const errorText = params.error
     ? params.code
       ? `${params.error} (code: ${params.code})`
@@ -40,6 +42,12 @@ export default async function LoginPage({
 
         {/* Auth card */}
         <div className="card p-6 sm:p-8">
+          {!supabaseConfigured ? (
+            <p className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and
+              NEXT_PUBLIC_SUPABASE_ANON_KEY in apps/admin/.env.local.
+            </p>
+          ) : null}
           <LoginForm initialError={errorText} initialMsg={params.msg} />
         </div>
 
