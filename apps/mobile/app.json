@@ -7,7 +7,6 @@
     "scheme": "arenax",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#020617",
-    "newArchEnabled": true,
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,

@@ -76,7 +76,7 @@ npm run admin:build          # verify locally
 
 Vercel project settings:
 
-- Root directory: `arenax/apps/admin`
+- Root directory: `apps/admin` (this repo root is `arenax/`)
 - Install command: `npm install` (workspace root auto-detected via `package-lock.json`)
 - Build command: `npm run build --workspace arenax-admin` (or `next build` inside the app)
 - Environment variables:

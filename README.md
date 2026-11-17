@@ -302,25 +302,25 @@ push. Expo Go can open every other screen.
 
 ## GitHub upload & live link
 
-The project lives inside `arenax/` of the current workspace and has **no git remote of its own**.
-To publish it without touching unrelated repositories:
+The project lives in `arenax/` and now has its **own local git repository** with an initial commit
+(`ArenaX: free-entry esports tournament organizer (phases 1-6)`). It is deliberately separate from
+any unrelated repository that may sit in a parent folder.
+
+To publish it:
 
 ```bash
 cd arenax
-git init
-git add .
-git commit -m "ArenaX: free-entry esports tournament organizer (phases 1-6)"
-git branch -M main
 git remote add origin https://github.com/<your-username>/arenax.git
 git push -u origin main
 ```
 
-Create the empty `arenax` repository on GitHub first (no README, no .gitignore).
+Create the empty `arenax` repository on GitHub first (no README, no `.gitignore`). If the remote is
+already configured, just `git push -u origin main`. Never point `origin` at an unrelated project.
 
 Live links need hosting accounts:
 
-- **Admin console (recommended live link):** import the repo in Vercel, set the root directory to
-  `arenax/apps/admin`, add the two `NEXT_PUBLIC_SUPABASE_*` variables → you get a public URL.
+- **Admin console (recommended live link):** import the `arenax` repo in Vercel, set the root
+  directory to `apps/admin`, add the two `NEXT_PUBLIC_SUPABASE_*` variables → you get a public URL.
 - **Mobile app:** React Native has no website. Build an APK with EAS
   (`npx eas build -p android --profile preview`) and share the install link, or export the web build
   (`npm run --workspace arenax-mobile build:web`) for a demo.
