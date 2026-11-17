@@ -2,70 +2,38 @@ import React from "react";
 
 import ARENA_CONFIG from "@arenax/config";
 
-import { signInAction } from "@/app/actions";
+import LoginForm from "@/components/LoginForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; msg?: string; next?: string }>;
 }) {
   const params = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-brand-300">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      {/* Decorative brand glows */}
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-indigo-900/40 blur-3xl" />
+
+      <div className="relative w-full max-w-md">
+        <div className="mb-8 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-700 text-xl font-black text-white shadow-lg shadow-brand-500/30">
+            A
+          </div>
+          <p className="mt-4 text-xs font-bold uppercase tracking-[0.3em] text-brand-300">
             {ARENA_CONFIG.appName}
           </p>
-          <h1 className="mt-2 text-2xl font-black text-white">Organizer console</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Sign in with the email + password on your organizer or admin account.
-          </p>
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Organizer console</h1>
+          <p className="mt-2 text-sm text-slate-400">{ARENA_CONFIG.tagline}.</p>
         </div>
 
-        <form action={signInAction} className="card space-y-4">
-          {params.error ? (
-            <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-              {params.error}
-            </p>
-          ) : null}
+        <LoginForm initialError={params.error} initialMsg={params.msg} />
 
-          <div>
-            <label className="label" htmlFor="email">
-              Email
-            </label>
-            <input id="email" name="email" type="email" required className="input" autoComplete="email" />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              className="input"
-              autoComplete="current-password"
-            />
-          </div>
-
-          <button type="submit" className="btn w-full">
-            Sign in
-          </button>
-
-          <p className="text-center text-[11px] leading-5 text-slate-600">
-            Players use the mobile app with phone OTP. The web console is for organizers and admins
-            only. Need access? Ask an admin to approve your organizer account.
-          </p>
-        </form>
-
-        <p className="mt-6 text-center text-[11px] text-slate-600">
+        <p className="mt-6 text-center text-[11px] leading-5 text-slate-600">
           {ARENA_CONFIG.legal.disclaimer}
         </p>
       </div>

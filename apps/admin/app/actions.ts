@@ -65,6 +65,18 @@ export async function signOutAction() {
   redirect("/login");
 }
 
+export async function forgotPasswordAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  const supabase = await createClient();
+
+  if (!email) fail("/login", "Enter your organizer email first.");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) fail("/login", error.message);
+
+  redirect("/login?msg=" + encodeURIComponent("Reset link sent. Check your inbox."));
+}
+
 /* -------------------------------------------------------------------------- */
 /* Tournaments                                                                */
 /* -------------------------------------------------------------------------- */
