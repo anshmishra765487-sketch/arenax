@@ -1,0 +1,54 @@
+# ArenaX local Supabase configuration (used by `supabase start`).
+# See https://supabase.com/docs/guides/cli/local-development
+project_id = "arenax"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+enabled = true
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["http://localhost:8081", "arenax://"]
+jwt_expiry = 3600
+# Phone OTP requires an SMS provider (Twilio / MSG91) in the dashboard.
+# For local development, use the test OTP printed in the Supabase logs.
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = true
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+
+[analytics]
+enabled = false
+
+[realtime]
+enabled = true

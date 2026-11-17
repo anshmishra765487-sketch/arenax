@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# env (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# expo / react native
+.expo/
+.expo-shared/
+dist/
+web-build/
+apps/mobile/android/
+apps/mobile/ios/
+
+# next.js (phase 4 admin panel)
+apps/admin/.next/
+apps/admin/out/
+
+# logs / caches
+*.log
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+coverage/
+
+# supabase
+supabase/.branches/
+supabase/.temp/
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea/

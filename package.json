@@ -1,0 +1,29 @@
+{
+  "name": "arenax",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ArenaX - mobile-first esports tournament organizer (free entry, no real-money gaming)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "npm run start --workspace arenax-mobile",
+    "mobile:android": "npm run android --workspace arenax-mobile",
+    "mobile:ios": "npm run ios --workspace arenax-mobile",
+    "admin": "npm run dev --workspace arenax-admin",
+    "admin:build": "npm run build --workspace arenax-admin",
+    "typecheck": "npm run typecheck --workspace arenax-mobile && npm run typecheck --workspace arenax-admin",
+    "test": "npm run test --workspace @arenax/core && npm run test --workspace arenax-mobile",
+    "supabase:start": "supabase start",
+    "supabase:reset": "supabase db reset",
+    "supabase:demo": "node scripts/seed-demo.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
