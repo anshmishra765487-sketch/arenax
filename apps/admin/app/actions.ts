@@ -53,8 +53,15 @@ export async function signInAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const supabase = await createClient();
 
+  if (!email) fail("/login", "Enter your organizer email.");
+  if (!password) fail("/login", "Enter your password.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail("/login", "Enter a valid email address.");
+
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) fail("/login", error.message);
+  if (error) {
+    const message = error.message || "Sign in failed. Please try again.";
+    redirect(`/login?error=${encodeURIComponent(message)}&code=${encodeURIComponent(error.code ?? "unknown")}`);
+  }
 
   redirect("/dashboard");
 }

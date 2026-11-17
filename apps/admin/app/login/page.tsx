@@ -9,9 +9,15 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; msg?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; msg?: string; next?: string; code?: string }>;
 }) {
   const params = await searchParams;
+
+  const errorText = params.error
+    ? params.code
+      ? `${params.error} (code: ${params.code})`
+      : params.error
+    : undefined;
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
@@ -31,7 +37,7 @@ export default async function LoginPage({
           <p className="mt-2 text-sm text-slate-400">{ARENA_CONFIG.tagline}.</p>
         </div>
 
-        <LoginForm initialError={params.error} initialMsg={params.msg} />
+        <LoginForm initialError={errorText} initialMsg={params.msg} />
 
         <p className="mt-6 text-center text-[11px] leading-5 text-slate-600">
           {ARENA_CONFIG.legal.disclaimer}
