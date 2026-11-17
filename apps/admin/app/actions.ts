@@ -57,10 +57,22 @@ export async function signInAction(formData: FormData) {
   if (!password) fail("/login", "Enter your password.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail("/login", "Enter a valid email address.");
 
+  // Clear any stale/corrupt session before signing in fresh.
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // ignore — sign-in will create a fresh session anyway
+  }
+
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     const message = error.message || "Sign in failed. Please try again.";
-    redirect(`/login?error=${encodeURIComponent(message)}&code=${encodeURIComponent(error.code ?? "unknown")}`);
+    const code = error.code ?? "unknown";
+    const friendly =
+      code === "validation_failed"
+        ? "Auth session validation failed. Please try again in a minute — if it repeats, sign out and retry."
+        : message;
+    redirect(`/login?error=${encodeURIComponent(friendly)}&code=${encodeURIComponent(code)}`);
   }
 
   redirect("/dashboard");
