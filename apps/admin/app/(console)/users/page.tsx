@@ -7,6 +7,8 @@ import {
   unbanUserAction,
 } from "@/app/actions";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_USERS } from "@/lib/demo";
+import { demoSession } from "@/lib/demo-session";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -16,19 +18,44 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<{ q?: string; error?: string; msg?: string }>;
 }) {
-  const supabase = await createClient();
   const params = await searchParams;
   const search = (params.q ?? "").trim();
+  const demo = await demoSession();
 
-  let query = supabase
-    .from("profiles")
-    .select("id, username, display_name, role, xp, level, trust_score, is_banned, created_at")
-    .order("created_at", { ascending: false })
-    .limit(100);
+  interface UserRow {
+    id: string;
+    username: string;
+    display_name: string | null;
+    role: string;
+    xp: number;
+    level: number;
+    trust_score: number;
+    is_banned: boolean;
+    created_at: string;
+  }
 
-  if (search) query = query.ilike("username", `%${search}%`);
+  let users: UserRow[] | null = null;
+  let error: { message: string } | null = null;
 
-  const { data: users, error } = await query;
+  if (demo) {
+    users = DEMO_USERS.filter((user) =>
+      search ? user.username.toLowerCase().includes(search.toLowerCase()) : true,
+    );
+  } else {
+    const supabase = await createClient();
+
+    let query = supabase
+      .from("profiles")
+      .select("id, username, display_name, role, xp, level, trust_score, is_banned, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (search) query = query.ilike("username", `%${search}%`);
+
+    const result = await query;
+    users = result.data;
+    error = result.error;
+  }
 
   return (
     <div className="space-y-6">

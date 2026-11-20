@@ -2,6 +2,8 @@ import React from "react";
 
 import { resolveDisputeAction, resolveReportAction } from "@/app/actions";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_DISPUTES, DEMO_REPORTS } from "@/lib/demo";
+import { demoSession } from "@/lib/demo-session";
 import { formatDateTime, statusClass } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -12,20 +14,52 @@ export default async function ModerationPage({
   searchParams: Promise<{ error?: string; msg?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
+  const demo = await demoSession();
 
-  const [{ data: reports }, { data: disputes }] = await Promise.all([
-    supabase
-      .from("reports")
-      .select("id, reporter_id, reported_id, category, description, status, created_at")
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("disputes")
-      .select("id, tournament_id, opened_by, reason, status, created_at")
-      .order("created_at", { ascending: false })
-      .limit(50),
-  ]);
+  interface ReportRow {
+    id: string;
+    reporter_id: string;
+    reported_id: string | null;
+    category: string;
+    description: string;
+    status: string;
+    created_at: string;
+  }
+
+  interface DisputeRow {
+    id: string;
+    tournament_id: string;
+    opened_by: string;
+    reason: string;
+    status: string;
+    created_at: string;
+  }
+
+  let reports: ReportRow[] | null = null;
+  let disputes: DisputeRow[] | null = null;
+
+  if (demo) {
+    reports = DEMO_REPORTS;
+    disputes = DEMO_DISPUTES;
+  } else {
+    const supabase = await createClient();
+
+    const [reportResult, disputeResult] = await Promise.all([
+      supabase
+        .from("reports")
+        .select("id, reporter_id, reported_id, category, description, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("disputes")
+        .select("id, tournament_id, opened_by, reason, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
+
+    reports = reportResult.data;
+    disputes = disputeResult.data;
+  }
 
   return (
     <div className="space-y-6">

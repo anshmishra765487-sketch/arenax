@@ -12,6 +12,8 @@ import {
   setTournamentStatusAction,
 } from "@/app/actions";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_DETAILS } from "@/lib/demo";
+import { demoSession } from "@/lib/demo-session";
 import { formatDateTime, statusClass } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -55,52 +57,109 @@ export default async function TournamentDetailPage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  const supabase = await createClient();
+  const demo = await demoSession();
 
-  const { data: tournament } = await supabase
-    .from("tournaments")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  interface TournamentRow {
+    id: string;
+    title: string;
+    game_id: string;
+    mode: string;
+    format: string;
+    status: string;
+    start_time: string;
+    slots_left: number;
+    slots_total: number;
+    bracket_generated_at: string | null;
+  }
+
+  let tournament: TournamentRow | null = null;
+  let room: { room_id: string; room_password: string; revealed_at: string | null } | null = null;
+  let registrations: Registration[] | null = null;
+  let matches: MatchRow[] | null = null;
+  let submissions: Submission[] | null = null;
+  let disputes: Array<{
+    id: string;
+    opened_by: string;
+    reason: string;
+    status: string;
+    created_at: string;
+  }> | null = null;
+  let announcements: Array<{ id: string; body: string; created_at: string }> | null = null;
+  let streams: Array<{
+    id: string;
+    title: string;
+    url: string;
+    platform: string;
+    is_live: boolean;
+  }> | null = null;
+
+  if (demo) {
+    const detail = DEMO_DETAILS[id];
+    if (!detail) notFound();
+
+    tournament = detail.tournament;
+    room = detail.room;
+    registrations = detail.registrations;
+    matches = detail.matches;
+    submissions = detail.submissions;
+    disputes = detail.disputes;
+    announcements = detail.announcements;
+    streams = detail.streams;
+  } else {
+    const supabase = await createClient();
+
+    const { data } = await supabase.from("tournaments").select("*").eq("id", id).maybeSingle();
+    tournament = data;
+
+    if (!tournament) notFound();
+
+    const [roomResult, registrationsResult, matchesResult, submissionsResult, disputesResult, announcementsResult, streamsResult] =
+      await Promise.all([
+        supabase.from("room_details").select("*").eq("tournament_id", id).maybeSingle(),
+        supabase
+          .from("registrations")
+          .select("id, player_id, status, in_game_id, created_at")
+          .eq("tournament_id", id)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("matches")
+          .select(
+            "id, match_number, bracket, home_registration_id, away_registration_id, home_score, away_score, winner_registration_id, status",
+          )
+          .eq("tournament_id", id)
+          .order("bracket", { ascending: true })
+          .order("match_number", { ascending: true }),
+        supabase
+          .from("result_submissions")
+          .select("id, match_id, submitted_by, screenshot_url, claimed_winner, status, created_at")
+          .eq("tournament_id", id)
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("disputes")
+          .select("id, opened_by, reason, status, created_at")
+          .eq("tournament_id", id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("announcements")
+          .select("id, body, created_at")
+          .eq("tournament_id", id)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase.from("streams").select("id, title, url, platform, is_live").eq("tournament_id", id),
+      ]);
+
+    room = roomResult.data;
+    registrations = registrationsResult.data;
+    matches = matchesResult.data;
+    submissions = submissionsResult.data;
+    disputes = disputesResult.data;
+    announcements = announcementsResult.data;
+    streams = streamsResult.data;
+  }
 
   if (!tournament) notFound();
-
-  const [{ data: room }, { data: registrations }, { data: matches }, { data: submissions }, { data: disputes }, { data: announcements }, { data: streams }] =
-    await Promise.all([
-      supabase.from("room_details").select("*").eq("tournament_id", id).maybeSingle(),
-      supabase
-        .from("registrations")
-        .select("id, player_id, status, in_game_id, created_at")
-        .eq("tournament_id", id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("matches")
-        .select(
-          "id, match_number, bracket, home_registration_id, away_registration_id, home_score, away_score, winner_registration_id, status",
-        )
-        .eq("tournament_id", id)
-        .order("bracket", { ascending: true })
-        .order("match_number", { ascending: true }),
-      supabase
-        .from("result_submissions")
-        .select("id, match_id, submitted_by, screenshot_url, claimed_winner, status, created_at")
-        .eq("tournament_id", id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("disputes")
-        .select("id, opened_by, reason, status, created_at")
-        .eq("tournament_id", id)
-        .order("created_at", { ascending: false })
-        .limit(20),
-      supabase
-        .from("announcements")
-        .select("id, body, created_at")
-        .eq("tournament_id", id)
-        .order("created_at", { ascending: false })
-        .limit(10),
-      supabase.from("streams").select("id, title, url, platform, is_live").eq("tournament_id", id),
-    ]);
 
   const regs = (registrations ?? []) as Registration[];
   const regMap = new Map(regs.map((registration) => [registration.id, registration]));

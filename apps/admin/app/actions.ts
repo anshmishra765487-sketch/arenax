@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import {
@@ -12,11 +13,23 @@ import {
   type BracketMatch,
 } from "@arenax/core";
 
+import { demoSession } from "@/lib/demo-session";
+import { DEMO_COOKIE, DEMO_EMAIL, DEMO_PASSWORD, isDemoMode } from "@/lib/demo";
 import { createClient } from "@/lib/supabase/server";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Demo mode has no database, so every write is reported as read-only instead of
+ * failing with a network error.
+ */
+async function guardDemo(path: string) {
+  if (await demoSession()) {
+    done(path, "Demo mode is read-only. Connect a Supabase project to save changes.");
+  }
+}
 
 async function requireUser() {
   const supabase = await createClient();
@@ -51,11 +64,32 @@ function isoOrNull(value: FormDataEntryValue | null): string | null {
 export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const supabase = await createClient();
 
   if (!email) fail("/login", "Enter your organizer email.");
   if (!password) fail("/login", "Enter your password.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail("/login", "Enter a valid email address.");
+
+  // Demo mode: no Supabase project is configured, so accept the demo organizer.
+  if (isDemoMode()) {
+    if (email.toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+      fail(
+        "/login",
+        `Demo mode is on. Sign in with ${DEMO_EMAIL} / ${DEMO_PASSWORD}, or add Supabase keys to use real accounts.`,
+      );
+    }
+
+    const store = await cookies();
+    store.set(DEMO_COOKIE, "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 12,
+    });
+
+    redirect("/dashboard");
+  }
+
+  const supabase = await createClient();
 
   // Clear any stale/corrupt session before signing in fresh.
   try {
@@ -95,17 +129,32 @@ export async function signInAction(formData: FormData) {
 }
 
 export async function signOutAction() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  const store = await cookies();
+  store.delete(DEMO_COOKIE);
+
+  if (!isDemoMode()) {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+  }
+
   redirect("/login");
 }
 
 export async function forgotPasswordAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
-  const supabase = await createClient();
 
   if (!email) fail("/login", "Enter your organizer email first.");
 
+  if (isDemoMode()) {
+    redirect(
+      "/login?msg=" +
+        encodeURIComponent(
+          `Demo mode: password reset is disabled. Use ${DEMO_EMAIL} / ${DEMO_PASSWORD} to sign in.`,
+        ),
+    );
+  }
+
+  const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email);
   if (error) fail("/login", error.message);
 
@@ -117,6 +166,7 @@ export async function forgotPasswordAction(formData: FormData) {
 /* -------------------------------------------------------------------------- */
 
 export async function createTournamentAction(formData: FormData) {
+  await guardDemo("/tournaments");
   const { supabase, user } = await requireUser();
 
   const title = String(formData.get("title") ?? "").trim();
@@ -164,8 +214,9 @@ export async function createTournamentAction(formData: FormData) {
 }
 
 export async function setTournamentStatusAction(formData: FormData) {
-  const { supabase } = await requireUser();
   const tournamentId = String(formData.get("tournament_id") ?? "");
+  await guardDemo(`/tournaments/${tournamentId}`);
+  const { supabase } = await requireUser();
   const status = String(formData.get("status") ?? "");
 
   if (!["upcoming", "live", "completed", "cancelled"].includes(status)) {
@@ -179,8 +230,9 @@ export async function setTournamentStatusAction(formData: FormData) {
 }
 
 export async function publishRoomAction(formData: FormData) {
-  const { supabase } = await requireUser();
   const tournamentId = String(formData.get("tournament_id") ?? "");
+  await guardDemo(`/tournaments/${tournamentId}`);
+  const { supabase } = await requireUser();
   const roomId = String(formData.get("room_id") ?? "").trim();
   const roomPassword = String(formData.get("room_password") ?? "").trim();
 
@@ -202,8 +254,9 @@ export async function publishRoomAction(formData: FormData) {
 }
 
 export async function generateBracketAction(formData: FormData) {
-  const { supabase } = await requireUser();
   const tournamentId = String(formData.get("tournament_id") ?? "");
+  await guardDemo(`/tournaments/${tournamentId}`);
+  const { supabase } = await requireUser();
 
   const { data: tournament, error: tournamentError } = await supabase
     .from("tournaments")
@@ -310,8 +363,9 @@ export async function generateBracketAction(formData: FormData) {
 }
 
 export async function advanceMatchAction(formData: FormData) {
-  const { supabase } = await requireUser();
   const tournamentId = String(formData.get("tournament_id") ?? "");
+  await guardDemo(`/tournaments/${tournamentId}`);
+  const { supabase } = await requireUser();
   const matchId = String(formData.get("match_id") ?? "");
   const winnerId = String(formData.get("winner_registration_id") ?? "");
   const homeScore = formData.get("home_score") ? Number(formData.get("home_score")) : null;
@@ -333,8 +387,9 @@ export async function advanceMatchAction(formData: FormData) {
 }
 
 export async function publishBrResultAction(formData: FormData) {
-  const { supabase } = await requireUser();
   const tournamentId = String(formData.get("tournament_id") ?? "");
+  await guardDemo(`/tournaments/${tournamentId}`);
+  const { supabase } = await requireUser();
   const rows = String(formData.get("entries") ?? "").trim();
 
   if (!rows) fail(`/tournaments/${tournamentId}`, "Paste at least one result line.");
@@ -369,8 +424,9 @@ export async function publishBrResultAction(formData: FormData) {
 }
 
 export async function reviewResultAction(formData: FormData) {
-  const { supabase } = await requireUser();
   const tournamentId = String(formData.get("tournament_id") ?? "");
+  await guardDemo(`/tournaments/${tournamentId}`);
+  const { supabase } = await requireUser();
   const submissionId = String(formData.get("submission_id") ?? "");
   const approve = String(formData.get("decision") ?? "approve") === "approve";
   const notes = String(formData.get("notes") ?? "").trim() || null;
@@ -390,8 +446,9 @@ export async function reviewResultAction(formData: FormData) {
 }
 
 export async function postAnnouncementAction(formData: FormData) {
-  const { supabase, user } = await requireUser();
   const tournamentId = String(formData.get("tournament_id") ?? "");
+  await guardDemo(`/tournaments/${tournamentId}`);
+  const { supabase, user } = await requireUser();
   const body = String(formData.get("body") ?? "").trim();
 
   if (body.length < 3) fail(`/tournaments/${tournamentId}`, "Announcement is too short.");
@@ -412,6 +469,7 @@ export async function postAnnouncementAction(formData: FormData) {
 /* -------------------------------------------------------------------------- */
 
 export async function banUserAction(formData: FormData) {
+  await guardDemo("/users");
   const { supabase } = await requireUser();
   const userId = String(formData.get("user_id") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
@@ -433,6 +491,7 @@ export async function banUserAction(formData: FormData) {
 }
 
 export async function unbanUserAction(formData: FormData) {
+  await guardDemo("/users");
   const { supabase } = await requireUser();
   const userId = String(formData.get("user_id") ?? "");
 
@@ -444,6 +503,7 @@ export async function unbanUserAction(formData: FormData) {
 }
 
 export async function issueStrikeAction(formData: FormData) {
+  await guardDemo("/users");
   const { supabase } = await requireUser();
   const userId = String(formData.get("user_id") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
@@ -465,6 +525,7 @@ export async function issueStrikeAction(formData: FormData) {
 }
 
 export async function approveOrganizerAction(formData: FormData) {
+  await guardDemo("/users");
   const { supabase } = await requireUser();
   const userId = String(formData.get("user_id") ?? "");
 
@@ -476,6 +537,7 @@ export async function approveOrganizerAction(formData: FormData) {
 }
 
 export async function resolveDisputeAction(formData: FormData) {
+  await guardDemo("/moderation");
   const { supabase } = await requireUser();
   const disputeId = String(formData.get("dispute_id") ?? "");
   const status = String(formData.get("status") ?? "resolved");
@@ -496,6 +558,7 @@ export async function resolveDisputeAction(formData: FormData) {
 }
 
 export async function resolveReportAction(formData: FormData) {
+  await guardDemo("/moderation");
   const { supabase } = await requireUser();
   const reportId = String(formData.get("report_id") ?? "");
   const status = String(formData.get("status") ?? "resolved");
@@ -516,6 +579,7 @@ export async function resolveReportAction(formData: FormData) {
 /* -------------------------------------------------------------------------- */
 
 export async function createSponsorAction(formData: FormData) {
+  await guardDemo("/sponsors");
   const { supabase, user } = await requireUser();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
@@ -541,6 +605,7 @@ export async function createSponsorAction(formData: FormData) {
 }
 
 export async function linkSponsorAction(formData: FormData) {
+  await guardDemo("/sponsors");
   const { supabase } = await requireUser();
   const sponsorId = String(formData.get("sponsor_id") ?? "");
   const tournamentId = String(formData.get("tournament_id") ?? "");

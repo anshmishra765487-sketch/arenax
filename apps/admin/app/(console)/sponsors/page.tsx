@@ -2,6 +2,8 @@ import React from "react";
 
 import { createSponsorAction, linkSponsorAction } from "@/app/actions";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_SPONSORS, DEMO_SPONSOR_LINKS, DEMO_TOURNAMENTS } from "@/lib/demo";
+import { demoSession } from "@/lib/demo-session";
 
 export const dynamic = "force-dynamic";
 
@@ -11,22 +13,60 @@ export default async function SponsorsPage({
   searchParams: Promise<{ error?: string; msg?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
+  const demo = await demoSession();
 
-  const [{ data: sponsors }, { data: tournaments }, { data: links }] = await Promise.all([
-    supabase
-      .from("sponsors")
-      .select("id, name, description, website_url, active, created_at")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("tournaments")
-      .select("id, title, start_time")
-      .order("start_time", { ascending: false })
-      .limit(50),
-    supabase
-      .from("sponsor_tournaments")
-      .select("sponsor_id, tournament_id, impressions, clicks, registrations, contribution_note"),
-  ]);
+  interface SponsorRow {
+    id: string;
+    name: string;
+    description: string | null;
+    website_url: string | null;
+    active: boolean;
+    created_at: string;
+  }
+
+  interface LinkRow {
+    sponsor_id: string;
+    tournament_id: string;
+    impressions: number;
+    clicks: number;
+    registrations: number;
+    contribution_note: string | null;
+  }
+
+  let sponsors: SponsorRow[] | null = null;
+  let tournaments: Array<{ id: string; title: string; start_time: string }> | null = null;
+  let links: LinkRow[] | null = null;
+
+  if (demo) {
+    sponsors = DEMO_SPONSORS;
+    tournaments = DEMO_TOURNAMENTS.map((row) => ({
+      id: row.id,
+      title: row.title,
+      start_time: row.start_time,
+    }));
+    links = DEMO_SPONSOR_LINKS;
+  } else {
+    const supabase = await createClient();
+
+    const [sponsorResult, tournamentResult, linkResult] = await Promise.all([
+      supabase
+        .from("sponsors")
+        .select("id, name, description, website_url, active, created_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("tournaments")
+        .select("id, title, start_time")
+        .order("start_time", { ascending: false })
+        .limit(50),
+      supabase
+        .from("sponsor_tournaments")
+        .select("sponsor_id, tournament_id, impressions, clicks, registrations, contribution_note"),
+    ]);
+
+    sponsors = sponsorResult.data;
+    tournaments = tournamentResult.data;
+    links = linkResult.data;
+  }
 
   const sponsorName = new Map((sponsors ?? []).map((row) => [row.id, row.name]));
   const tournamentName = new Map((tournaments ?? []).map((row) => [row.id, row.title]));

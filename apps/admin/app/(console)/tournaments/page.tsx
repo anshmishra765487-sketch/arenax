@@ -5,6 +5,8 @@ import ARENA_CONFIG from "@arenax/config";
 
 import { createTournamentAction } from "@/app/actions";
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_TOURNAMENTS } from "@/lib/demo";
+import { demoSession } from "@/lib/demo-session";
 import { formatDateTime, statusClass } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +17,31 @@ export default async function TournamentsPage({
   searchParams: Promise<{ error?: string; msg?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const { data: tournaments } = await supabase
-    .from("tournaments")
-    .select("id, title, game_id, mode, format, status, start_time, slots_left, slots_total")
-    .order("start_time", { ascending: false })
-    .limit(100);
+  const demo = await demoSession();
+
+  let tournaments: Array<{
+    id: string;
+    title: string;
+    game_id: string;
+    mode: string;
+    format: string | null;
+    status: string;
+    start_time: string;
+    slots_left: number;
+    slots_total: number;
+  }> | null = null;
+
+  if (demo) {
+    tournaments = DEMO_TOURNAMENTS;
+  } else {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("tournaments")
+      .select("id, title, game_id, mode, format, status, start_time, slots_left, slots_total")
+      .order("start_time", { ascending: false })
+      .limit(100);
+    tournaments = data;
+  }
 
   return (
     <div className="space-y-6">

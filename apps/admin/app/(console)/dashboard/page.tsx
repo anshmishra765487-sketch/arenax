@@ -2,6 +2,8 @@ import Link from "next/link";
 import React from "react";
 
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_STATS, DEMO_TOURNAMENTS } from "@/lib/demo";
+import { demoSession } from "@/lib/demo-session";
 import { formatDateTime, statusClass } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -30,27 +32,52 @@ function Stat({ label, value, hint }: { label: string; value: number | string; h
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const demo = await demoSession();
 
-  const { data: statsData, error: statsError } = await supabase.rpc("admin_dashboard_stats");
-  const stats = (statsData ?? null) as Stats | null;
+  let stats: Stats | null = null;
+  let tournaments: Array<{
+    id: string;
+    title: string;
+    game_id: string;
+    status: string;
+    start_time: string;
+    slots_left: number;
+    slots_total: number;
+  }> | null = null;
+  let fallback = { tournaments: 0, live: 0, registrations: 0 };
 
-  const { data: tournaments } = await supabase
-    .from("tournaments")
-    .select("id, title, game_id, status, start_time, slots_left, slots_total")
-    .order("start_time", { ascending: false })
-    .limit(8);
+  if (demo) {
+    stats = DEMO_STATS;
+    tournaments = DEMO_TOURNAMENTS.slice(0, 8);
+    fallback = {
+      tournaments: tournaments.length,
+      live: tournaments.filter((row) => row.status === "live").length,
+      registrations: DEMO_STATS.registrations,
+    };
+  } else {
+    const supabase = await createClient();
 
-  let fallback = { tournaments: tournaments?.length ?? 0, live: 0, registrations: 0 };
-  if (statsError && tournaments?.length) {
-    fallback.live = tournaments.filter((row) => row.status === "live").length;
-    const ids = tournaments.map((row) => row.id);
-    const { count } = await supabase
-      .from("registrations")
-      .select("id", { count: "exact", head: true })
-      .in("tournament_id", ids)
-      .eq("status", "confirmed");
-    fallback.registrations = count ?? 0;
+    const { data: statsData, error: statsError } = await supabase.rpc("admin_dashboard_stats");
+    stats = (statsData ?? null) as Stats | null;
+
+    const { data } = await supabase
+      .from("tournaments")
+      .select("id, title, game_id, status, start_time, slots_left, slots_total")
+      .order("start_time", { ascending: false })
+      .limit(8);
+    tournaments = data;
+
+    fallback = { tournaments: tournaments?.length ?? 0, live: 0, registrations: 0 };
+    if (statsError && tournaments?.length) {
+      fallback.live = tournaments.filter((row) => row.status === "live").length;
+      const ids = tournaments.map((row) => row.id);
+      const { count } = await supabase
+        .from("registrations")
+        .select("id", { count: "exact", head: true })
+        .in("tournament_id", ids)
+        .eq("status", "confirmed");
+      fallback.registrations = count ?? 0;
+    }
   }
 
   return (
