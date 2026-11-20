@@ -17,6 +17,39 @@ result verification, leaderboards and community — plus an organizer console fo
 
 ---
 
+## Try it (demo mode, no database required)
+
+The organizer console boots in **demo mode** when no Supabase project is configured
+(`NEXT_PUBLIC_SUPABASE_URL` missing or `NEXT_PUBLIC_DEMO_MODE=true`). In demo mode:
+
+* `/login` accepts the demo organizer below and sets a local demo cookie.
+* Overview, tournaments, bracket room, results, users, moderation and sponsors render
+  realistic sample data.
+* Every write action reports *"Demo mode is read-only"* instead of failing.
+* Adding real Supabase keys switches the same code back to live data — nothing else changes.
+
+| | |
+|---|---|
+| Sign in | `organizer@arenax.demo` / `ArenaX!demo123` |
+| Run locally | `npm install` then `npm run dev --workspace arenax-admin` → http://localhost:3000/login |
+| Repository | https://github.com/anshmishra765487-sketch/arenax |
+
+```bash
+# 1. install once (Node >= 20.9)
+npm install
+
+# 2. start the console — demo mode is automatic without env vars
+npm run dev --workspace arenax-admin
+
+# 3. open http://localhost:3000/login and sign in with the demo credentials
+```
+
+To go live, copy `.env.example` to `apps/admin/.env.local`, fill
+`NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`, apply the migrations and
+sign in with a real organizer account. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+---
+
 ## Status — Phases 1–6 implemented
 
 | Phase | Scope | State |
