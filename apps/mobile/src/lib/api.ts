@@ -1,7 +1,17 @@
 import { supabase } from "./supabase";
+import {
+  DEMO_GAME_ACCOUNTS,
+  DEMO_LEADERBOARD,
+  DEMO_NOTIFICATIONS,
+  DEMO_PROFILE,
+  DEMO_REGISTRATIONS,
+  DEMO_TOURNAMENTS,
+  isDemoMode,
+} from "./demo";
 import type {
   AppNotification,
   GameAccount,
+  LeaderboardEntry,
   Profile,
   Registration,
   RpcResult,
@@ -13,6 +23,8 @@ function fail(message: string): never {
 }
 
 export async function fetchTournaments(): Promise<Tournament[]> {
+  if (isDemoMode()) return DEMO_TOURNAMENTS;
+
   const { data, error } = await supabase
     .from("tournaments")
     .select("*")
@@ -23,6 +35,10 @@ export async function fetchTournaments(): Promise<Tournament[]> {
 }
 
 export async function fetchTournamentById(id: string): Promise<Tournament | null> {
+  if (isDemoMode()) {
+    return DEMO_TOURNAMENTS.find((tournament) => tournament.id === id) ?? null;
+  }
+
   const { data, error } = await supabase
     .from("tournaments")
     .select("*")
@@ -37,6 +53,14 @@ export async function fetchMyRegistration(
   tournamentId: string,
   playerId: string,
 ): Promise<Registration | null> {
+  if (isDemoMode()) {
+    return (
+      DEMO_REGISTRATIONS.find(
+        (registration) => registration.tournament_id === tournamentId && registration.player_id === playerId,
+      ) ?? null
+    );
+  }
+
   const { data, error } = await supabase
     .from("registrations")
     .select("*")
@@ -49,6 +73,8 @@ export async function fetchMyRegistration(
 }
 
 export async function fetchProfile(userId: string): Promise<Profile | null> {
+  if (isDemoMode()) return DEMO_PROFILE;
+
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -60,6 +86,8 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function fetchGameAccounts(playerId: string): Promise<GameAccount[]> {
+  if (isDemoMode()) return DEMO_GAME_ACCOUNTS;
+
   const { data, error } = await supabase
     .from("game_accounts")
     .select("*")
@@ -71,6 +99,8 @@ export async function fetchGameAccounts(playerId: string): Promise<GameAccount[]
 }
 
 export async function fetchNotifications(userId: string): Promise<AppNotification[]> {
+  if (isDemoMode()) return DEMO_NOTIFICATIONS;
+
   const { data, error } = await supabase
     .from("notifications")
     .select("*")
@@ -82,6 +112,28 @@ export async function fetchNotifications(userId: string): Promise<AppNotificatio
   return (data ?? []) as AppNotification[];
 }
 
+export async function fetchLeaderboard(
+  scope: string,
+  tournamentId: string | null = null,
+): Promise<LeaderboardEntry[]> {
+  if (isDemoMode()) {
+    const entries = DEMO_LEADERBOARD.filter((entry) => entry.scope === scope);
+    if (tournamentId) {
+      return entries.filter((entry) => entry.tournament_id === tournamentId);
+    }
+    return entries;
+  }
+  const { data, error } = await supabase
+    .from("leaderboard_entries")
+    .select("*")
+    .eq("scope", scope)
+    .eq("tournament_id", tournamentId ?? "__none__")
+    .order("points", { ascending: false });
+  if (error) fail(error.message);
+  return (data ?? []) as LeaderboardEntry[];
+}
+
+
 /**
  * Registers the caller through the server-side RPC (slot lock, time window,
  * duplicate check, verified in-game ID). Team id is optional (Phase 2 UI).
@@ -90,6 +142,10 @@ export async function joinTournament(
   tournamentId: string,
   teamId: string | null = null,
 ): Promise<RpcResult> {
+  if (isDemoMode()) {
+    return { ok: true, error: null, registration_id: "demo-registration" };
+  }
+
   const { data, error } = await supabase.rpc("join_tournament", {
     p_tournament_id: tournamentId,
     p_team_id: teamId,
@@ -105,6 +161,10 @@ export async function joinTournament(
 }
 
 export async function cancelRegistration(tournamentId: string): Promise<RpcResult> {
+  if (isDemoMode()) {
+    return { ok: true, error: null, registration_id: "demo-registration" };
+  }
+
   const { data, error } = await supabase.rpc("cancel_registration", {
     p_tournament_id: tournamentId,
   });

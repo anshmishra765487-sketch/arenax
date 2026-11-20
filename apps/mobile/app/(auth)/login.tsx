@@ -32,7 +32,7 @@ function normalizeIndianPhone(raw: string): string {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { sendPhoneOtp, verifyPhoneOtp, signInWithGoogle, session } = useAuth();
+  const { sendPhoneOtp, verifyPhoneOtp, signInWithGoogle, session, signInDemo } = useAuth();
 
   const [stage, setStage] = useState<"phone" | "otp">("phone");
   const [rawPhone, setRawPhone] = useState("");
@@ -174,6 +174,19 @@ export default function LoginScreen() {
                   title="Continue with Google"
                   variant="outline"
                   onPress={googleSignIn}
+                  disabled={busy}
+                />
+
+                <View className="my-4 flex-row items-center">
+                  <View className="h-px flex-1 bg-slate-800" />
+                  <Text className="mx-3 text-xs text-slate-500">OR</Text>
+                  <View className="h-px flex-1 bg-slate-800" />
+                </View>
+
+                <Button
+                  title="Continue in demo mode"
+                  variant="outline"
+                  onPress={() => void signInDemo()}
                   disabled={busy}
                 />
               </>

@@ -55,6 +55,28 @@ To go live, copy `.env.example` to `apps/admin/.env.local`, fill
 `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`, apply the migrations and
 sign in with a real organizer account. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
+### Player app (mobile) — GitHub Pages
+
+The mobile app ships the same demo-mode switch (`EXPO_PUBLIC_DEMO_MODE=true`), so the player
+flow can be previewed fully offline: sign in with **Continue in demo mode** → tournaments →
+tournament detail all render sample data.
+
+Static web build + GitHub Pages deploy (automatic):
+
+1. Push to `main` with changes under `apps/mobile/**` or this workflow file.
+2. `.github/workflows/arenax-pages.yml` builds `npx expo export --platform web` (demo mode)
+   and deploys `apps/mobile/dist` to GitHub Pages.
+3. Live URL: **https://anshmishra765487-sketch.github.io/arenax/**
+
+Manual build + preview:
+
+```bash
+cd apps/mobile
+EXPO_PUBLIC_DEMO_MODE=true npx expo export --platform web
+npx --yes serve -s dist -l 4321     # then open http://localhost:4321
+```
+
+
 ### Screenshots (demo mode)
 
 | Login | Overview |

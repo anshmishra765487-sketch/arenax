@@ -11,6 +11,7 @@ import React, {
 } from "react";
 
 import { supabase } from "../../lib/supabase";
+import { DEMO_PROFILE, DEMO_SESSION, DEMO_USER, isDemoMode } from "../../lib/demo";
 import { identifyUser, resetAnalytics } from "../../lib/analytics";
 import { registerPushToken } from "../../lib/push";
 import type { Profile } from "../../lib/types";
@@ -29,6 +30,8 @@ export interface AuthContextValue {
   /** Reloads the profile row (after onboarding edits). */
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Demo mode: enters the local demo session (sample data, no backend). */
+  signInDemo: () => Promise<{ error?: string }>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -69,8 +72,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const applyDemoSession = useCallback(async () => {
+    setSession(DEMO_SESSION);
+    setUser(DEMO_USER);
+    setProfile(DEMO_PROFILE);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
+
+    if (isDemoMode()) {
+      // Demo mode: start the local sample session instead of talking to Supabase.
+      setSession(DEMO_SESSION);
+      setUser(DEMO_USER);
+      setProfile(DEMO_PROFILE);
+      setLoading(false);
+      return () => {
+        mounted = false;
+      };
+    }
 
     supabase.auth
       .getSession()
@@ -98,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [applySession]);
+  }, [applySession, applyDemoSession]);
 
   const sendPhoneOtp = useCallback(async (phone: string) => {
     const { error } = await supabase.auth.signInWithOtp({ phone });
@@ -111,6 +132,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
+    if (isDemoMode()) {
+      applyDemoSession();
+      return {};
+    }
+
     const redirectTo = Linking.createURL("auth-callback");
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -135,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refresh_token: refreshToken,
     });
     return sessionError ? { error: sessionError.message } : {};
-  }, []);
+  }, [applyDemoSession]);
 
   const refreshProfile = useCallback(async () => {
     const currentUser = userIdRef.current;
@@ -144,6 +170,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (isDemoMode()) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      userIdRef.current = null;
+      resetAnalytics();
+      return;
+    }
+
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
@@ -152,6 +187,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetAnalytics();
   }, []);
 
+  const signInDemo = useCallback(async () => {
+    applyDemoSession();
+    return {};
+  }, [applyDemoSession]);
   // Register the device push token once per signed-in user, and identify the
   // user in analytics (both are best-effort no-ops on web / Expo Go).
   useEffect(() => {
@@ -171,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       refreshProfile,
       signOut,
+      signInDemo,
     }),
     [
       session,
@@ -182,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       refreshProfile,
       signOut,
+      signInDemo,
     ],
   );
 

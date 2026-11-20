@@ -16,6 +16,7 @@ import {
 } from "../../../src/lib/api";
 import { addMatchToCalendar } from "../../../src/lib/calendar";
 import { scheduleMatchReminders } from "../../../src/lib/push";
+import { DEMO_ROOM, isDemoMode } from "../../../src/lib/demo";
 import { supabase } from "../../../src/lib/supabase";
 import type {
   Registration,
@@ -96,20 +97,26 @@ export default function TournamentDetailScreen() {
       setTournament(nextTournament);
 
       if (nextTournament) {
-        const [{ data: sponsorRows }, { data: streamRows }] = await Promise.all([
-          supabase
-            .from("sponsor_tournaments")
-            .select("banner_url, sponsor:sponsors(id, name, logo_url, website_url, description)")
-            .eq("tournament_id", nextTournament.id),
-          supabase
-            .from("streams")
-            .select("*")
-            .eq("tournament_id", nextTournament.id)
-            .order("created_at", { ascending: false }),
-        ]);
+        if (isDemoMode()) {
+          setSponsors([]);
+          setStreams([]);
+          setRoom((DEMO_ROOM ?? null) as RoomDetails | null);
+        } else {
+          const [{ data: sponsorRows }, { data: streamRows }] = await Promise.all([
+            supabase
+              .from("sponsor_tournaments")
+              .select("banner_url, sponsor:sponsors(id, name, logo_url, website_url, description)")
+              .eq("tournament_id", nextTournament.id),
+            supabase
+              .from("streams")
+              .select("*")
+              .eq("tournament_id", nextTournament.id)
+              .order("created_at", { ascending: false }),
+          ]);
 
-        setSponsors((sponsorRows ?? []) as unknown as SponsorLink[]);
-        setStreams((streamRows ?? []) as Stream[]);
+          setSponsors((sponsorRows ?? []) as unknown as SponsorLink[]);
+          setStreams((streamRows ?? []) as Stream[]);
+        }
       }
 
       if (nextTournament && user) {
@@ -118,12 +125,16 @@ export default function TournamentDetailScreen() {
 
         // RLS only returns the row if the caller is a confirmed, registered
         // player AND the server-side reveal time has passed.
-        const { data: roomData } = await supabase
-          .from("room_details")
-          .select("*")
-          .eq("tournament_id", nextTournament.id)
-          .maybeSingle();
-        setRoom((roomData as RoomDetails | null) ?? null);
+        if (isDemoMode()) {
+          setRoom((DEMO_ROOM ?? null) as RoomDetails | null);
+        } else {
+          const { data: roomData } = await supabase
+            .from("room_details")
+            .select("*")
+            .eq("tournament_id", nextTournament.id)
+            .maybeSingle();
+          setRoom((roomData as RoomDetails | null) ?? null);
+        }
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load tournament");
