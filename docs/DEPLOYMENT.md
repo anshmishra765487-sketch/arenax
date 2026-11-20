@@ -83,6 +83,11 @@ Vercel project settings:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
+> **Deploy first, connect later.** The env vars are optional to start: with no Supabase
+> project configured the console boots in **demo mode** (sample data, read-only writes,
+> demo organizer sign-in). That makes a Vercel preview useful on day one — add the two
+> env vars whenever the Supabase project is ready and redeploy for live data.
+
 Create the first admin manually in the SQL editor:
 
 ```sql

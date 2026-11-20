@@ -48,6 +48,17 @@ To go live, copy `.env.example` to `apps/admin/.env.local`, fill
 `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`, apply the migrations and
 sign in with a real organizer account. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
+### Screenshots (demo mode)
+
+| Login | Overview |
+|---|---|
+| ![Login](docs/screenshots/login.png) | ![Overview](docs/screenshots/dashboard.png) |
+
+| Tournaments | Bracket & matches | Disputes |
+|---|---|---|
+| ![Tournaments](docs/screenshots/tournaments.png) | ![Bracket](docs/screenshots/bracket.png) | ![Moderation](docs/screenshots/moderation.png) |
+
+
 ---
 
 ## Status — Phases 1–6 implemented
