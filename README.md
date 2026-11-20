@@ -44,6 +44,13 @@ npm run dev --workspace arenax-admin
 # 3. open http://localhost:3000/login and sign in with the demo credentials
 ```
 
+Share it with someone outside your Wi-Fi (temporary public URL, no account needed):
+
+```bash
+npm run admin:demo                                   # production build + start on :3000
+npx cloudflared tunnel --url http://localhost:3000   # prints a https://…trycloudflare.com link
+```
+
 To go live, copy `.env.example` to `apps/admin/.env.local`, fill
 `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`, apply the migrations and
 sign in with a real organizer account. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

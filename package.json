@@ -13,6 +13,7 @@
     "mobile:ios": "npm run ios --workspace arenax-mobile",
     "admin": "npm run dev --workspace arenax-admin",
     "admin:build": "npm run build --workspace arenax-admin",
+    "admin:demo": "npm run build --workspace arenax-admin && npm run start --workspace arenax-admin",
     "typecheck": "npm run typecheck --workspace arenax-mobile && npm run typecheck --workspace arenax-admin",
     "test": "npm run test --workspace @arenax/core && npm run test --workspace arenax-mobile",
     "supabase:start": "supabase start",
